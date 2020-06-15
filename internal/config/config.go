@@ -1,9 +1,11 @@
 package config
 
 import (
+	"path/filepath"
 	"strings"
 
 	"github.com/jpillora/opts"
+	"github.com/samphillips/backup/internal/logging"
 )
 
 // Config contains the validated flags
@@ -17,6 +19,20 @@ type Config struct {
 func ParseConfig() Config {
 	c := Config{}
 	opts.Parse(&c)
+
+	var err error
+
+	c.SrcDir, err = filepath.Abs(c.SrcDir)
+
+	if err != nil {
+		logging.Fatal("Could not resolve absolute path for source directory: %s", err)
+	}
+
+	c.DstDir, err = filepath.Abs(c.DstDir)
+
+	if err != nil {
+		logging.Fatal("Could not resolve absolute path for source directory: %s", err)
+	}
 
 	if !strings.HasSuffix(c.SrcDir, "/") {
 		c.SrcDir += "/"
