@@ -12,6 +12,7 @@ import (
 type Config struct {
 	SrcDir  string `opts:"mode=arg,help=(Required) The absolute directory path you wish to back up"`
 	DstDir  string `opts:"mode=arg,help=(Required) The absolute directory that the source directory will be backed up to"`
+	Mirror  bool   `opts:"help=Ensure backup location is a mirror of the source location (This will remove any files in the destination that do not exist at the source)"`
 	Verbose bool   `opts:"help=Enable debug logging"`
 }
 

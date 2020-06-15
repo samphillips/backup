@@ -55,4 +55,15 @@ func main() {
 			logging.Error("Failed to copy file %s: %s", filepath.Join(config.SrcDir, f), err)
 		}
 	}
+
+	if config.Mirror {
+		for dstPath := range dstIndex {
+			if _, ok := srcIndex[dstPath]; !ok {
+				err := os.RemoveAll(dstPath)
+				if err != nil {
+					logging.Error("Failed to remove file %s: %s", filepath.Join(config.DstDir, dstPath), err)
+				}
+			}
+		}
+	}
 }
