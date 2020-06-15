@@ -1,6 +1,8 @@
 package config
 
 import (
+	"strings"
+
 	"github.com/jpillora/opts"
 )
 
@@ -15,6 +17,14 @@ type Config struct {
 func ParseConfig() Config {
 	c := Config{}
 	opts.Parse(&c)
+
+	if !strings.HasSuffix(c.SrcDir, "/") {
+		c.SrcDir += "/"
+	}
+
+	if !strings.HasSuffix(c.DstDir, "/") {
+		c.DstDir += "/"
+	}
 
 	return c
 }
