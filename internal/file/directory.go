@@ -13,6 +13,10 @@ func ScanDirectory(dirPath string) map[string]os.FileInfo {
 	files := map[string]os.FileInfo{}
 
 	err := filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
+		if path == dirPath {
+			return nil
+		}
+
 		if err != nil {
 			return err
 		}
