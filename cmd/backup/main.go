@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"path/filepath"
 
 	"github.com/samphillips/backup/internal/config"
 	"github.com/samphillips/backup/internal/file"
@@ -42,5 +43,16 @@ func main() {
 	close(srcSDChan)
 	close(dstSDChan)
 
-	file.GenerateBackupDetails(srcIndex, dstIndex, config.SrcDir, config.DstDir)
+	files, directories, _ := file.GenerateBackupDetails(srcIndex, dstIndex, config.SrcDir, config.DstDir)
+
+	for _, dir := range directories {
+		os.MkdirAll(filepath.Join(config.DstDir, dir), os.ModePerm)
+	}
+
+	for _, f := range files {
+		err := file.CopyFile(filepath.Join(config.SrcDir, f), filepath.Join(config.DstDir, f))
+		if err != nil {
+			logging.Error("Failed to copy file %s: %s", filepath.Join(config.SrcDir, f), err)
+		}
+	}
 }

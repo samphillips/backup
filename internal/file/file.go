@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/samphillips/backup/internal/logging"
 )
@@ -41,13 +42,13 @@ func GenerateBackupDetails(srcIndex, dstIndex map[string]os.FileInfo, srcDir, ds
 			}
 
 			if srcFile.Size() == dstFile.Size() {
-				srcSum, err := hashFile(srcDir + srcPath)
+				srcSum, err := hashFile(filepath.Join(srcDir + srcPath))
 
 				if err != nil {
 					logging.Warn("Could not calculate md5 hashsum of file: %s", srcDir+srcPath)
 				}
 
-				dstSum, err := hashFile(dstDir + srcPath)
+				dstSum, err := hashFile(filepath.Join(dstDir + srcPath))
 
 				if err != nil {
 					logging.Warn("Could not calculate md5 hashsum of file: %s", dstDir+srcPath)
@@ -71,4 +72,31 @@ func GenerateBackupDetails(srcIndex, dstIndex map[string]os.FileInfo, srcDir, ds
 		}
 	}
 	return
+}
+
+// CopyFile copies the source file to the destination file
+func CopyFile(srcPath, dstPath string) error {
+	srcFile, err := os.Open(srcPath)
+	if err != nil {
+		return err
+	}
+	defer srcFile.Close()
+
+	destFile, err := os.Create(dstPath)
+	if err != nil {
+		return err
+	}
+	defer destFile.Close()
+
+	_, err = io.Copy(destFile, srcFile)
+	if err != nil {
+		return err
+	}
+
+	err = destFile.Sync()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
