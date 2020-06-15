@@ -41,4 +41,6 @@ func main() {
 
 	close(srcSDChan)
 	close(dstSDChan)
+
+	file.GenerateBackupDetails(srcIndex, dstIndex, config.SrcDir, config.DstDir)
 }
