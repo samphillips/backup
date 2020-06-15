@@ -45,7 +45,7 @@ func main() {
 	close(dstSDChan)
 
 	logging.Info("Determining files to be backed up")
-	files, directories := file.GenerateBackupDetails(srcIndex, dstIndex, config.SrcDir, config.DstDir)
+	files, directories, symlinks := file.GenerateBackupDetails(srcIndex, dstIndex, config.SrcDir, config.DstDir)
 
 	logging.Info("Creating new directories")
 	bar := progress.Start(len(directories) + 1)
@@ -58,7 +58,6 @@ func main() {
 	bar.Finish()
 
 	logging.Info("Copying files")
-
 	bar = progress.Start(len(files) + 1)
 	for _, f := range files {
 		bar.Increment()
@@ -66,6 +65,24 @@ func main() {
 		err := file.CopyFile(filepath.Join(config.SrcDir, f), filepath.Join(config.DstDir, f))
 		if err != nil {
 			logging.Error("Failed to copy file %s: %s", filepath.Join(config.SrcDir, f), err)
+		}
+	}
+	bar.Increment()
+	bar.Finish()
+
+	logging.Info("Copying symlinks")
+	bar = progress.Start(len(symlinks) + 1)
+	for link, target := range symlinks {
+		bar.Increment()
+		logging.Debug("Creating symlink to %s at %s", filepath.Join(config.DstDir, target), filepath.Join(config.DstDir, link))
+		if _, err := os.Lstat(filepath.Join(config.DstDir, link)); err == nil {
+			if err := os.Remove(filepath.Join(config.DstDir, link)); err != nil {
+				logging.Error("Failed to unlink: %+v", err)
+			}
+		}
+		err := os.Symlink(filepath.Join(config.DstDir, target), filepath.Join(config.DstDir, link))
+		if err != nil {
+			logging.Error("Failed to create symlink %s: %s", filepath.Join(config.DstDir, link), err)
 		}
 	}
 	bar.Increment()

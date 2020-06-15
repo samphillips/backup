@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/samphillips/backup/internal/logging"
 	"github.com/samphillips/backup/internal/progress"
@@ -32,15 +33,30 @@ func hashFile(filePath string) (string, error) {
 	return hashString, nil
 }
 
-// GenerateBackupDetails determines the list of directories and files to create in the backup
-// location
-func GenerateBackupDetails(srcIndex, dstIndex map[string]os.FileInfo, srcDir, dstDir string) (filesToCopy, directoriesToCreate []string) {
+// GenerateBackupDetails determines the list of directories, files and symlinks to create in the
+// backup location
+func GenerateBackupDetails(srcIndex, dstIndex map[string]os.FileInfo, srcDir, dstDir string) ([]string, []string, map[string]string) {
 	bar := progress.Start(len(srcIndex) + 1)
+
+	var files, directories []string
+	symlinks := map[string]string{}
+
 	for srcPath, srcFile := range srcIndex {
 		bar.Increment()
 		if dstFile, ok := dstIndex[srcPath]; ok {
 			if srcFile.IsDir() {
 				logging.Debug("Skipping %s as directory already exists at backup location", srcPath)
+				continue
+			}
+
+			if srcFile.Mode()&os.ModeSymlink != 0 {
+				link, err := os.Readlink(filepath.Join(srcDir, srcPath))
+				if err != nil {
+					logging.Warn("Error reading file %s symlink: %s", srcPath, err)
+					continue
+				}
+				logging.Debug("Marking symlink at %s for backup", srcPath)
+				symlinks[srcPath] = strings.TrimPrefix(link, srcDir)
 				continue
 			}
 
@@ -59,27 +75,39 @@ func GenerateBackupDetails(srcIndex, dstIndex map[string]os.FileInfo, srcDir, ds
 
 				if srcSum != dstSum {
 					logging.Debug("Marking %s for backup as file hashsum is different to file at backup location", srcPath)
-					filesToCopy = append(filesToCopy, srcPath)
+					files = append(files, srcPath)
 				} else {
 					logging.Debug("Skipping %s as the file has not changed", srcPath)
 				}
 			} else {
 				logging.Debug("Marking %s for backup as file size is different to file at backup location", srcPath)
-				filesToCopy = append(filesToCopy, srcPath)
+				files = append(files, srcPath)
 			}
 		} else {
 			if srcFile.IsDir() {
 				logging.Debug("Marking %s for creation as directory does not exist at backup location", srcPath)
-				directoriesToCreate = append(directoriesToCreate, srcPath)
+				directories = append(directories, srcPath)
 			} else {
+				if srcFile.Mode()&os.ModeSymlink != 0 {
+					link, err := os.Readlink(filepath.Join(srcDir, srcPath))
+					if err != nil {
+						logging.Warn("Error reading file %s symlink: %s", srcPath, err)
+						continue
+					}
+					logging.Debug("Marking symlink at %s for backup", srcPath)
+					symlinks[srcPath] = strings.TrimPrefix(link, srcDir)
+					continue
+				}
+
 				logging.Debug("Marking %s for backup as file does not exist at backup location", srcPath)
-				filesToCopy = append(filesToCopy, srcPath)
+				files = append(files, srcPath)
 			}
 		}
 	}
 	bar.Increment()
 	bar.Finish()
-	return
+
+	return files, directories, symlinks
 }
 
 // CopyFile copies the source file to the destination file
