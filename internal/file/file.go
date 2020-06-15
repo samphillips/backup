@@ -33,8 +33,8 @@ func hashFile(filePath string) (string, error) {
 }
 
 // GenerateBackupDetails determines the list of directories and files to create in the backup
-// location as well as the total size of the files to copy
-func GenerateBackupDetails(srcIndex, dstIndex map[string]os.FileInfo, srcDir, dstDir string) (filesToCopy, directoriesToCreate []string, totalSize int64) {
+// location
+func GenerateBackupDetails(srcIndex, dstIndex map[string]os.FileInfo, srcDir, dstDir string) (filesToCopy, directoriesToCreate []string) {
 	bar := progress.Start(len(srcIndex) + 1)
 	for srcPath, srcFile := range srcIndex {
 		bar.Increment()
@@ -60,14 +60,12 @@ func GenerateBackupDetails(srcIndex, dstIndex map[string]os.FileInfo, srcDir, ds
 				if srcSum != dstSum {
 					logging.Debug("Marking %s for backup as file hashsum is different to file at backup location", srcPath)
 					filesToCopy = append(filesToCopy, srcPath)
-					totalSize += srcFile.Size()
 				} else {
 					logging.Debug("Skipping %s as the file has not changed", srcPath)
 				}
 			} else {
 				logging.Debug("Marking %s for backup as file size is different to file at backup location", srcPath)
 				filesToCopy = append(filesToCopy, srcPath)
-				totalSize += srcFile.Size()
 			}
 		} else {
 			if srcFile.IsDir() {
@@ -76,7 +74,6 @@ func GenerateBackupDetails(srcIndex, dstIndex map[string]os.FileInfo, srcDir, ds
 			} else {
 				logging.Debug("Marking %s for backup as file does not exist at backup location", srcPath)
 				filesToCopy = append(filesToCopy, srcPath)
-				totalSize += srcFile.Size()
 			}
 		}
 	}
