@@ -70,23 +70,25 @@ func main() {
 	bar.Increment()
 	bar.Finish()
 
-	logging.Info("Copying symlinks")
-	bar = progress.Start(len(symlinks) + 1)
-	for link, target := range symlinks {
-		bar.Increment()
-		logging.Debug("Creating symlink to %s at %s", target, filepath.Join(config.DstDir, link))
-		if _, err := os.Lstat(filepath.Join(config.DstDir, link)); err == nil {
-			if err := os.Remove(filepath.Join(config.DstDir, link)); err != nil {
-				logging.Error("Failed to unlink: %+v", err)
+	if config.IncludeSymlinks {
+		logging.Info("Copying symlinks")
+		bar = progress.Start(len(symlinks) + 1)
+		for link, target := range symlinks {
+			bar.Increment()
+			logging.Debug("Creating symlink to %s at %s", target, filepath.Join(config.DstDir, link))
+			if _, err := os.Lstat(filepath.Join(config.DstDir, link)); err == nil {
+				if err := os.Remove(filepath.Join(config.DstDir, link)); err != nil {
+					logging.Error("Failed to unlink: %+v", err)
+				}
+			}
+			err := os.Symlink(target, filepath.Join(config.DstDir, link))
+			if err != nil {
+				logging.Error("Failed to create symlink %s: %s", filepath.Join(config.DstDir, link), err)
 			}
 		}
-		err := os.Symlink(target, filepath.Join(config.DstDir, link))
-		if err != nil {
-			logging.Error("Failed to create symlink %s: %s", filepath.Join(config.DstDir, link), err)
-		}
+		bar.Increment()
+		bar.Finish()
 	}
-	bar.Increment()
-	bar.Finish()
 
 	if config.Mirror {
 		logging.Info("Removing excess files in backup directory")
