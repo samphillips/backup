@@ -64,9 +64,17 @@ func createFile(path string, data []byte) error {
 
 func Test(t *testing.T) { TestingT(t) }
 
-type FileTestSuite struct{}
+type FileTestSuite struct {
+	srcDir string
+	dstDir string
+}
 
 var _ = Suite(&FileTestSuite{})
+
+func (f *FileTestSuite) SetUpTest(c *C) {
+	f.srcDir = c.MkDir()
+	f.dstDir = c.MkDir()
+}
 
 func (*FileTestSuite) TestCopyFileCopiesFile(c *C) {
 	baseDir := os.TempDir()
@@ -287,5 +295,268 @@ func (*FileTestSuite) TestGenerateBackupDetailsAddsSymlinksNotInBackupLocation(c
 	c.Check(symlinks, DeepEquals, map[string]string{
 		"symlink1": "target",
 		"symlink2": "target",
+	})
+}
+
+func (*FileTestSuite) TestGenerateBackupDetailsDoesNotAddDirectoriesInBackupLocation(c *C) {
+	srcIndex := map[string]os.FileInfo{
+		"dir1": &MockFileInfo{
+			name:    "dir1",
+			size:    1,
+			mode:    os.ModeDir,
+			modTime: time.Now(),
+			isDir:   true,
+		},
+		"dir2": &MockFileInfo{
+			name:    "dir2",
+			size:    1,
+			mode:    os.ModeDir,
+			modTime: time.Now(),
+			isDir:   true,
+		},
+	}
+
+	dstIndex := map[string]os.FileInfo{
+		"dir1": &MockFileInfo{
+			name:    "dir1",
+			size:    1,
+			mode:    os.ModeDir,
+			modTime: time.Now(),
+			isDir:   true,
+		},
+		"dir2": &MockFileInfo{
+			name:    "dir2",
+			size:    1,
+			mode:    os.ModeDir,
+			modTime: time.Now(),
+			isDir:   true,
+		},
+	}
+
+	srcDir := "/src/"
+	dstDir := "/dst/"
+
+	files, directories, symlinks := GenerateBackupDetails(srcIndex, dstIndex, srcDir, dstDir)
+
+	c.Check(files, HasLen, 0)
+	c.Check(symlinks, HasLen, 0)
+	c.Check(directories, HasLen, 0)
+}
+
+func (*FileTestSuite) TestGenerateBackupDetailsDoesNotAddFilesInBackupLocation(c *C) {
+	srcIndex := map[string]os.FileInfo{
+		"file1": &MockFileInfo{
+			name:    "file1",
+			size:    1,
+			mode:    100644,
+			modTime: time.Now(),
+			isDir:   false,
+		},
+		"file2": &MockFileInfo{
+			name:    "file2",
+			size:    1,
+			mode:    100644,
+			modTime: time.Now(),
+			isDir:   false,
+		},
+	}
+
+	dstIndex := map[string]os.FileInfo{
+		"file1": &MockFileInfo{
+			name:    "file1",
+			size:    1,
+			mode:    100644,
+			modTime: time.Now(),
+			isDir:   false,
+		},
+		"file2": &MockFileInfo{
+			name:    "file2",
+			size:    1,
+			mode:    100644,
+			modTime: time.Now(),
+			isDir:   false,
+		},
+	}
+
+	srcDir := "/src/"
+	dstDir := "/dst/"
+
+	files, directories, symlinks := GenerateBackupDetails(srcIndex, dstIndex, srcDir, dstDir)
+
+	c.Check(files, HasLen, 0)
+	c.Check(symlinks, HasLen, 0)
+	c.Check(directories, HasLen, 0)
+}
+
+func (*FileTestSuite) TestGenerateBackupDetailsDoesNotAddSymlinksInBackupLocation(c *C) {
+	baseDir := os.TempDir()
+	targetFile := filepath.Join(baseDir, "target")
+
+	err := createFile(targetFile, []byte{})
+	c.Check(err, IsNil)
+	defer os.Remove(targetFile)
+
+	symlink1 := filepath.Join(baseDir, "symlink1")
+	err = os.Symlink(targetFile, symlink1)
+	c.Check(err, IsNil)
+	defer os.Remove(symlink1)
+
+	symlink2 := filepath.Join(baseDir, "symlink2")
+	err = os.Symlink(targetFile, symlink2)
+	c.Check(err, IsNil)
+	defer os.Remove(symlink2)
+
+	srcIndex := map[string]os.FileInfo{
+		"symlink1": &MockFileInfo{
+			name:    "symlink1",
+			size:    1,
+			mode:    os.ModeSymlink,
+			modTime: time.Now(),
+			isDir:   false,
+		},
+		"symlink2": &MockFileInfo{
+			name:    "symlink2",
+			size:    1,
+			mode:    os.ModeSymlink,
+			modTime: time.Now(),
+			isDir:   false,
+		},
+	}
+
+	dstIndex := map[string]os.FileInfo{
+		"symlink1": &MockFileInfo{
+			name:    "symlink1",
+			size:    1,
+			mode:    os.ModeSymlink,
+			modTime: time.Now(),
+			isDir:   false,
+		},
+		"symlink2": &MockFileInfo{
+			name:    "symlink2",
+			size:    1,
+			mode:    os.ModeSymlink,
+			modTime: time.Now(),
+			isDir:   false,
+		},
+	}
+
+	srcDir := baseDir
+	dstDir := baseDir
+
+	files, directories, symlinks := GenerateBackupDetails(srcIndex, dstIndex, srcDir, dstDir)
+
+	c.Check(files, HasLen, 0)
+	c.Check(symlinks, HasLen, 0)
+	c.Check(directories, HasLen, 0)
+}
+
+func (*FileTestSuite) TestGenerateBackupDetailsAddsFilesWithDifferentSizeInBackupLocation(c *C) {
+	srcIndex := map[string]os.FileInfo{
+		"file1": &MockFileInfo{
+			name:    "file1",
+			size:    2,
+			mode:    100644,
+			modTime: time.Now(),
+			isDir:   false,
+		},
+		"file2": &MockFileInfo{
+			name:    "file2",
+			size:    2,
+			mode:    100644,
+			modTime: time.Now(),
+			isDir:   false,
+		},
+	}
+
+	dstIndex := map[string]os.FileInfo{
+		"file1": &MockFileInfo{
+			name:    "file1",
+			size:    1,
+			mode:    100644,
+			modTime: time.Now(),
+			isDir:   false,
+		},
+		"file2": &MockFileInfo{
+			name:    "file2",
+			size:    1,
+			mode:    100644,
+			modTime: time.Now(),
+			isDir:   false,
+		},
+	}
+
+	srcDir := "/src/"
+	dstDir := "/dst/"
+
+	files, directories, symlinks := GenerateBackupDetails(srcIndex, dstIndex, srcDir, dstDir)
+
+	c.Check(files, HasLen, 2)
+	c.Check(symlinks, HasLen, 0)
+	c.Check(directories, HasLen, 0)
+	c.Check(files, DeepEquals, []string{
+		"file1",
+		"file2",
+	})
+}
+
+func (f *FileTestSuite) TestGenerateBackupDetailsAddsFilesWithSameSizeDifferentHashsumInBackupLocation(c *C) {
+	err := createFile(filepath.Join(f.srcDir, "file1"), []byte{'a'})
+	c.Check(err, IsNil)
+	defer os.Remove(filepath.Join(f.srcDir, "file1"))
+
+	err = createFile(filepath.Join(f.srcDir, "file2"), []byte{'a'})
+	c.Check(err, IsNil)
+	defer os.Remove(filepath.Join(f.srcDir, "file2"))
+
+	err = createFile(filepath.Join(f.dstDir, "file1"), []byte{'b'})
+	c.Check(err, IsNil)
+	defer os.Remove(filepath.Join(f.dstDir, "file1"))
+
+	err = createFile(filepath.Join(f.dstDir, "file2"), []byte{'b'})
+	c.Check(err, IsNil)
+	defer os.Remove(filepath.Join(f.dstDir, "file2"))
+
+	srcIndex := map[string]os.FileInfo{
+		"file1": &MockFileInfo{
+			name:    "file1",
+			size:    1,
+			mode:    100644,
+			modTime: time.Now(),
+			isDir:   false,
+		},
+		"file2": &MockFileInfo{
+			name:    "file2",
+			size:    1,
+			mode:    100644,
+			modTime: time.Now(),
+			isDir:   false,
+		},
+	}
+
+	dstIndex := map[string]os.FileInfo{
+		"file1": &MockFileInfo{
+			name:    "file1",
+			size:    1,
+			mode:    100644,
+			modTime: time.Now(),
+			isDir:   false,
+		},
+		"file2": &MockFileInfo{
+			name:    "file2",
+			size:    1,
+			mode:    100644,
+			modTime: time.Now(),
+			isDir:   false,
+		},
+	}
+
+	files, directories, symlinks := GenerateBackupDetails(srcIndex, dstIndex, f.srcDir, f.dstDir)
+
+	c.Check(files, HasLen, 2)
+	c.Check(symlinks, HasLen, 0)
+	c.Check(directories, HasLen, 0)
+	c.Check(files, DeepEquals, []string{
+		"file1",
+		"file2",
 	})
 }

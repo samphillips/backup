@@ -50,14 +50,17 @@ func GenerateBackupDetails(srcIndex, dstIndex map[string]os.FileInfo, srcDir, ds
 			}
 
 			if srcFile.Mode()&os.ModeSymlink != 0 {
-				link, err := os.Readlink(filepath.Join(srcDir, srcPath))
+				srcLink, err := os.Readlink(filepath.Join(srcDir, srcPath))
 				if err != nil {
 					logging.Warn("Error reading file %s symlink: %s", srcPath, err)
 					continue
 				}
-				logging.Debug("Marking symlink at %s for backup", srcPath)
-				symlinks[srcPath] = strings.TrimPrefix(link, srcDir)
-				continue
+				dstLink, err := os.Readlink(filepath.Join(dstDir, srcPath))
+				if err == nil && strings.TrimPrefix(srcLink, srcDir) != strings.TrimPrefix(dstLink, dstDir) {
+					logging.Debug("Marking symlink at %s for backup", srcPath)
+					symlinks[srcPath] = strings.TrimPrefix(srcLink, srcDir)
+					continue
+				}
 			}
 
 			if srcFile.Size() == dstFile.Size() {
