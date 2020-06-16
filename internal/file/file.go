@@ -35,7 +35,7 @@ func hashFile(filePath string) (string, error) {
 
 // GenerateBackupDetails determines the list of directories, files and symlinks to create in the
 // backup location
-func GenerateBackupDetails(srcIndex, dstIndex map[string]os.FileInfo, srcDir, dstDir string) ([]string, []string, map[string]string) {
+func GenerateBackupDetails(srcIndex, dstIndex map[string]os.FileInfo, srcDir, dstDir string, skipHashsum bool) ([]string, []string, map[string]string) {
 	bar := progress.Start(len(srcIndex) + 1)
 
 	var files, directories []string
@@ -67,6 +67,11 @@ func GenerateBackupDetails(srcIndex, dstIndex map[string]os.FileInfo, srcDir, ds
 			}
 
 			if srcFile.Size() == dstFile.Size() {
+				if skipHashsum {
+					logging.Debug("Skipping %s as the file size has not changed and hashsum skip is enabled", srcPath)
+					continue
+				}
+
 				srcSum, err := hashFile(filepath.Join(srcDir, srcPath))
 
 				if err != nil {

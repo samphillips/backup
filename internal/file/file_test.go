@@ -202,7 +202,7 @@ func (*FileTestSuite) TestGenerateBackupDetailsAddsDirectoriesNotInBackupLocatio
 	srcDir := "/src/"
 	dstDir := "/dst/"
 
-	files, directories, symlinks := GenerateBackupDetails(srcIndex, dstIndex, srcDir, dstDir)
+	files, directories, symlinks := GenerateBackupDetails(srcIndex, dstIndex, srcDir, dstDir, false)
 
 	c.Check(files, HasLen, 0)
 	c.Check(symlinks, HasLen, 0)
@@ -236,7 +236,7 @@ func (*FileTestSuite) TestGenerateBackupDetailsAddsFilesNotInBackupLocation(c *C
 	srcDir := "/src/"
 	dstDir := "/dst/"
 
-	files, directories, symlinks := GenerateBackupDetails(srcIndex, dstIndex, srcDir, dstDir)
+	files, directories, symlinks := GenerateBackupDetails(srcIndex, dstIndex, srcDir, dstDir, false)
 
 	c.Check(files, HasLen, 2)
 	c.Check(symlinks, HasLen, 0)
@@ -287,7 +287,7 @@ func (*FileTestSuite) TestGenerateBackupDetailsAddsSymlinksNotInBackupLocation(c
 	srcDir := baseDir
 	dstDir := "/dst/"
 
-	files, directories, symlinks := GenerateBackupDetails(srcIndex, dstIndex, srcDir, dstDir)
+	files, directories, symlinks := GenerateBackupDetails(srcIndex, dstIndex, srcDir, dstDir, false)
 
 	c.Check(files, HasLen, 0)
 	c.Check(symlinks, HasLen, 2)
@@ -336,7 +336,7 @@ func (*FileTestSuite) TestGenerateBackupDetailsDoesNotAddDirectoriesInBackupLoca
 	srcDir := "/src/"
 	dstDir := "/dst/"
 
-	files, directories, symlinks := GenerateBackupDetails(srcIndex, dstIndex, srcDir, dstDir)
+	files, directories, symlinks := GenerateBackupDetails(srcIndex, dstIndex, srcDir, dstDir, false)
 
 	c.Check(files, HasLen, 0)
 	c.Check(symlinks, HasLen, 0)
@@ -381,7 +381,7 @@ func (*FileTestSuite) TestGenerateBackupDetailsDoesNotAddFilesInBackupLocation(c
 	srcDir := "/src/"
 	dstDir := "/dst/"
 
-	files, directories, symlinks := GenerateBackupDetails(srcIndex, dstIndex, srcDir, dstDir)
+	files, directories, symlinks := GenerateBackupDetails(srcIndex, dstIndex, srcDir, dstDir, false)
 
 	c.Check(files, HasLen, 0)
 	c.Check(symlinks, HasLen, 0)
@@ -469,7 +469,7 @@ func (f *FileTestSuite) TestGenerateBackupDetailsDoesNotAddSymlinksInBackupLocat
 		},
 	}
 
-	files, directories, symlinks := GenerateBackupDetails(srcIndex, dstIndex, f.srcDir, f.dstDir)
+	files, directories, symlinks := GenerateBackupDetails(srcIndex, dstIndex, f.srcDir, f.dstDir, false)
 
 	c.Check(files, HasLen, 0)
 	c.Check(symlinks, HasLen, 0)
@@ -533,7 +533,7 @@ func (f *FileTestSuite) TestGenerateBackupDetailsAddsSymlinksThatAreFilesInBacku
 		},
 	}
 
-	files, directories, symlinks := GenerateBackupDetails(srcIndex, dstIndex, f.srcDir, f.dstDir)
+	files, directories, symlinks := GenerateBackupDetails(srcIndex, dstIndex, f.srcDir, f.dstDir, false)
 
 	c.Check(files, HasLen, 0)
 	c.Check(symlinks, HasLen, 1)
@@ -567,7 +567,7 @@ func (f *FileTestSuite) TestGenerateBackupDetailsSymlinksUseOriginalTargetIfTarg
 
 	dstIndex := map[string]os.FileInfo{}
 
-	files, directories, symlinks := GenerateBackupDetails(srcIndex, dstIndex, f.srcDir, f.dstDir)
+	files, directories, symlinks := GenerateBackupDetails(srcIndex, dstIndex, f.srcDir, f.dstDir, false)
 
 	c.Check(files, HasLen, 0)
 	c.Check(symlinks, HasLen, 1)
@@ -615,7 +615,7 @@ func (*FileTestSuite) TestGenerateBackupDetailsAddsFilesWithDifferentSizeInBacku
 	srcDir := "/src/"
 	dstDir := "/dst/"
 
-	files, directories, symlinks := GenerateBackupDetails(srcIndex, dstIndex, srcDir, dstDir)
+	files, directories, symlinks := GenerateBackupDetails(srcIndex, dstIndex, srcDir, dstDir, false)
 
 	c.Check(files, HasLen, 2)
 	c.Check(symlinks, HasLen, 0)
@@ -677,7 +677,7 @@ func (f *FileTestSuite) TestGenerateBackupDetailsAddsFilesWithSameSizeDifferentH
 		},
 	}
 
-	files, directories, symlinks := GenerateBackupDetails(srcIndex, dstIndex, f.srcDir, f.dstDir)
+	files, directories, symlinks := GenerateBackupDetails(srcIndex, dstIndex, f.srcDir, f.dstDir, false)
 
 	c.Check(files, HasLen, 2)
 	c.Check(symlinks, HasLen, 0)
@@ -686,4 +686,62 @@ func (f *FileTestSuite) TestGenerateBackupDetailsAddsFilesWithSameSizeDifferentH
 		"file1",
 		"file2",
 	})
+}
+
+func (f *FileTestSuite) TestGenerateBackupDetailsDoesNotAddFilesWithSameSizeDifferentHashsumInBackupLocationWhenSkipHashsumEnabled(c *C) {
+	err := createFile(filepath.Join(f.srcDir, "file1"), []byte{'a'})
+	c.Check(err, IsNil)
+	defer os.Remove(filepath.Join(f.srcDir, "file1"))
+
+	err = createFile(filepath.Join(f.srcDir, "file2"), []byte{'a'})
+	c.Check(err, IsNil)
+	defer os.Remove(filepath.Join(f.srcDir, "file2"))
+
+	err = createFile(filepath.Join(f.dstDir, "file1"), []byte{'b'})
+	c.Check(err, IsNil)
+	defer os.Remove(filepath.Join(f.dstDir, "file1"))
+
+	err = createFile(filepath.Join(f.dstDir, "file2"), []byte{'b'})
+	c.Check(err, IsNil)
+	defer os.Remove(filepath.Join(f.dstDir, "file2"))
+
+	srcIndex := map[string]os.FileInfo{
+		"file1": &MockFileInfo{
+			name:    "file1",
+			size:    1,
+			mode:    100644,
+			modTime: time.Now(),
+			isDir:   false,
+		},
+		"file2": &MockFileInfo{
+			name:    "file2",
+			size:    1,
+			mode:    100644,
+			modTime: time.Now(),
+			isDir:   false,
+		},
+	}
+
+	dstIndex := map[string]os.FileInfo{
+		"file1": &MockFileInfo{
+			name:    "file1",
+			size:    1,
+			mode:    100644,
+			modTime: time.Now(),
+			isDir:   false,
+		},
+		"file2": &MockFileInfo{
+			name:    "file2",
+			size:    1,
+			mode:    100644,
+			modTime: time.Now(),
+			isDir:   false,
+		},
+	}
+
+	files, directories, symlinks := GenerateBackupDetails(srcIndex, dstIndex, f.srcDir, f.dstDir, true)
+
+	c.Check(files, HasLen, 0)
+	c.Check(symlinks, HasLen, 0)
+	c.Check(directories, HasLen, 0)
 }

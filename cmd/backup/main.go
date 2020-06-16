@@ -45,7 +45,7 @@ func main() {
 	close(dstSDChan)
 
 	logging.Info("Determining files to be backed up")
-	files, directories, symlinks := file.GenerateBackupDetails(srcIndex, dstIndex, config.SrcDir, config.DstDir)
+	files, directories, symlinks := file.GenerateBackupDetails(srcIndex, dstIndex, config.SrcDir, config.DstDir, config.Fast)
 
 	logging.Info("Creating new directories")
 	bar := progress.Start(len(directories) + 1)
