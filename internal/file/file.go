@@ -13,7 +13,7 @@ import (
 	"github.com/samphillips/backup/internal/progress"
 )
 
-// HashFile generates the md5 sum hash string of a file
+// hashFile generates the md5 sum hash string of a file
 func hashFile(filePath string) (string, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -184,11 +184,6 @@ func CopyFile(srcPath, dstPath string) error {
 	defer destFile.Close()
 
 	_, err = io.Copy(destFile, srcFile)
-	if err != nil {
-		return err
-	}
-
-	err = destFile.Sync()
 	if err != nil {
 		return err
 	}
