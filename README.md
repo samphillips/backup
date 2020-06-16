@@ -15,10 +15,11 @@ mv backup /usr/local/bin
 
 Options
 ```
--m, --mirror  | Make the destination directory a mirror of the source directory 
-                (Removes any files in dest that aren't also in source)
--v, --verbose | Enable debug logging (Warning, lots of logs)
--h, --help    | Print usage
+-f, --fast             | Don't perform hashsum checks on files of the same size (assume their contents are equal by the file size)
+-m, --mirror           | Make the destination directory a mirror of the source directory (Removes any files in dest that aren't also in source)
+-i, --include-symlinks | Also backup any symlinks
+-v, --verbose          | Enable debug logging (Warning, lots of logs)
+-h, --help             | Print usage
 ```
 
 ## Restoring a backed up directory
